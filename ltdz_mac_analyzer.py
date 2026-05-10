@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# LTDZ Mac Analyzer
-# Copyright (c) 2026 Michael Andre
-# Licensed under the MIT License. See LICENSE file for details.
-#
-# Experimental prototype / vibe-coded test version.
-# This software is not calibrated measurement equipment.
-# Use at your own risk.
-#
-
 """
 LTDZ Mac Analyzer – native Python/Qt GUI for LTDZ 35/33-4400 MHz modules.
 
@@ -1203,10 +1193,10 @@ class MainWindow(QtWidgets.QMainWindow):
         import sys
         from pathlib import Path
 
-        helper = Path(__file__).with_name("ltdz_capture_helper.py")
+        helper = Path(__file__).with_name("ltdz_capture_helper_v5.py")
         if not helper.exists():
             self.log(f"Helper fehlt: {helper}")
-            self.log("Bitte ltdz_capture_helper.py in denselben Ordner legen.")
+            self.log("Bitte ltdz_capture_helper_v5.py in denselben Ordner legen.")
             return
 
         self.set_connection_status("Live Helper läuft …", True)
