@@ -41,6 +41,7 @@ import pyqtgraph as pg
 
 
 PREFIX = 0x8F
+APP_VERSION = "0.1.1"
 
 
 @dataclass
@@ -140,7 +141,8 @@ class LTDZDevice:
             )
 
         pause_ms = max(0, min(999, int(cfg.pause_ms)))
-        cmd = b"a"  # confirmed working
+        command = (cfg.command or "a").strip()[:1] or "a"
+        cmd = command.encode("ascii", errors="ignore")[:1] or b"a"
         filler = b"00"
 
         packet = (
@@ -477,7 +479,7 @@ class HelperLiveWorker(QtCore.QThread):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("LTDZ Mac Analyzer")
+        self.setWindowTitle(f"LTDZ Mac Analyzer v{APP_VERSION}")
         self.resize(1200, 760)
         self.setMinimumSize(760, 520)
 
@@ -1172,14 +1174,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.log("Sweep läuft bereits.")
             return
 
+        simulate = self.sim_check.isChecked()
         port = self.selected_port()
-        if not port:
+        if not simulate and not port:
             self.log("Kein Port ausgewählt.")
             return
 
         cfg = self.config()
         cfg = self.ensure_valid_step_width(cfg)
-        cfg.command = "a"
         if cfg.response_format == "auto":
             cfg.response_format = "u16pair"
 
@@ -1194,9 +1196,34 @@ class MainWindow(QtWidgets.QMainWindow):
         from pathlib import Path
 
         helper = Path(__file__).with_name("ltdz_capture_helper_v5.py")
+        if simulate:
+            self.set_connection_status("Simulation aktiv", True)
+            self.worker = SweepWorker(self.device, cfg, continuous, True)
+            self.worker.result.connect(self.update_plot)
+            self.worker.status.connect(self.log)
+            self.worker.error.connect(lambda e: self.log(f"Sweep Fehler: {e}"))
+            self.worker.finished.connect(lambda: self.log("Sweep gestoppt."))
+            self.worker.start()
+            self.log("Continuous Simulation gestartet." if continuous else "Single Simulation gestartet.")
+            return
+
         if not helper.exists():
-            self.log(f"Helper fehlt: {helper}")
-            self.log("Bitte ltdz_capture_helper_v5.py in denselben Ordner legen.")
+            self.log(f"Optionaler Helper fehlt: {helper}")
+            self.log("Falle auf direkte serielle Messung zurück.")
+            if not self.device.connected:
+                self.connect_device()
+            if not self.device.connected:
+                self.log("Direkte Messung nicht möglich: Gerät ist nicht verbunden.")
+                return
+
+            self.set_connection_status("Direkter Sweep läuft …", True)
+            self.worker = SweepWorker(self.device, cfg, continuous, False)
+            self.worker.result.connect(self.update_plot)
+            self.worker.status.connect(self.log)
+            self.worker.error.connect(lambda e: self.log(f"Sweep Fehler: {e}"))
+            self.worker.finished.connect(lambda: self.log("Sweep gestoppt."))
+            self.worker.start()
+            self.log("Continuous direkter Sweep gestartet." if continuous else "Single direkter Sweep gestartet.")
             return
 
         self.set_connection_status("Live Helper läuft …", True)

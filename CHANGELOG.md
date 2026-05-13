@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.1 experimental
+
+### Fixed
+
+- Added the app version to the main window title.
+- Let simulation sweeps run without requiring a serial port selection.
+- Kept the selected sweep command when building sweep packets instead of always forcing `a`.
+- Fall back to the built-in direct serial sweep worker when the optional helper script is not present.
+
 ## v0.1.0 experimental
 
 Initial public test version.
